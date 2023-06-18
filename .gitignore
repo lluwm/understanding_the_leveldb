@@ -1,0 +1,7 @@
+# editors
+*.sw*
+.vscode
+.DS_Store
+
+# build outputs
+*/*.o
