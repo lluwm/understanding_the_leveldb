@@ -12,7 +12,8 @@ namespace leveldb {
 static const int kBlockSize = 4096; // 4KB.
 
 char *
-Arena::Allocate(size_t bytes) {
+Arena::Allocate(size_t bytes)
+{
     assert(bytes > 0);
 
     if (bytes <= _alloc_bytes_remaining) {
@@ -25,7 +26,8 @@ Arena::Allocate(size_t bytes) {
 }
 
 char *
-Arena::AllocateFallBack(size_t bytes) {
+Arena::AllocateFallBack(size_t bytes)
+{
     if (bytes > kBlockSize / 4) {
         /*
          * Object is more than a quarter of block size. Allocate it separately
@@ -48,7 +50,8 @@ Arena::AllocateFallBack(size_t bytes) {
  * Allocate memory space with the normal alignment gurantees.
  */
 char *
-Arena::AllocateAligned(size_t bytes) {
+Arena::AllocateAligned(size_t bytes)
+{
     // 8 bytes alignment by default.
     const int align = sizeof(void *) > 8 ? sizeof(void *) : 8;
     static_assert((align & (align - 1)) == 0, "pointer size should be a power of 2");
