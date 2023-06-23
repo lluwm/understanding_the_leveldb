@@ -43,15 +43,14 @@ private:
     char *AllocateFallBack(size_t bytes);
     char *AllocateNewBlock(size_t block_bytes);
 
-
-    // Total memory usage of the arena.
-    size_t _memory_usage;
+    // Allocation state.
+    char *_alloc_ptr;
 
     // The remaining unused bytes in the current memory block.
     size_t _alloc_bytes_remaining;
 
-    // Allocation state.
-    char *_alloc_ptr;
+    // Total memory usage of the arena.
+    size_t _memory_usage;
 
     // Array of new[] allocated memory blocks.
     vector<char *> _blocks;

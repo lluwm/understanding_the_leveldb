@@ -119,13 +119,6 @@ SkipList<Key, Comparator>::FindLast() const
     }
 }
 
-// Returns true with ~'1/n' possbility, false otherwise.
-static bool
-IsOneIn(int n)
-{
-    return rand() % n == 0;
-}
-
 template <typename Key, class Comparator>
 int
 SkipList<Key, Comparator>::RandomHeight() {
@@ -133,7 +126,7 @@ SkipList<Key, Comparator>::RandomHeight() {
   static const int kBranching = 4;
   int height = 1;
 
-  while (height < kMaxHeight && IsOneIn(kBranching)) {
+  while (height < kMaxHeight && _rnd.OneIn(kBranching)) {
     height++;
   }
 

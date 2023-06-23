@@ -5,6 +5,7 @@
 #pragma once
 
 #include "util/arena.h"
+#include "util/random.h"
 
 #include <cassert>
 using namespace std;
@@ -23,7 +24,8 @@ public:
      */
     explicit SkipList(Comparator cmp, Arena *arena) : _compare(cmp),
                                                       _arena(arena),
-                                                      _max_height(1) {
+                                                      _max_height(1),
+                                                      _rnd(0xdeadbeef) {
         _head = NewNode(0, kMaxHeight);
         for (int i = 0; i < kMaxHeight; i++) {
             _head->SetNext(i, nullptr);
@@ -168,6 +170,9 @@ private:
 
     // Modified only by Insert(). Read concurrently by readers, but stale vlaues are okay.
     int _max_height;
+
+    // Read/written only by Insert().
+    Random _rnd;
 };
 
 template <typename Key, class Comparator>
