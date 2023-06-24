@@ -13,11 +13,11 @@ LDFLAGS=-L$(GOOGLETEST_DIR)/lib -lpthread -lgtest -lgtest_main
 
 LIBOBJECTS = \
 		./db/memtable.o\
-		./db/skiplist.o\
 		./util/arena.o
 
 TESTS = \
-		arena_test
+		arena_test		\
+		skiplist_test
 
 PROGRAMS = leveldb.a
 
@@ -33,8 +33,12 @@ leveldb.a: $(LIBOBJECTS)
 clean:
 	rm -f */*.o $(PROGRAMS) $(TESTS)
 
+.PHONY: test
 test: $(TESTS)
 	@ for t in $(TESTS); do echo "=== Running $$t ==="; ./$$t || exit 1; done
 
 arena_test: ./util/arena.o ./util/arena_test.o
+	$(CC) $(LDFLAGS) $^ -o $@
+
+skiplist_test: ./db/skiplist_test.o ./util/arena.o
 	$(CC) $(LDFLAGS) $^ -o $@

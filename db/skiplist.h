@@ -22,11 +22,11 @@ public:
      * and allocates memory using 'arena'. Objects allocated in the arena
      * must remain allocated for the lifetime of the skiplist object.
      */
-    explicit SkipList(Comparator cmp, Arena *arena) : _compare(cmp),
-                                                      _arena(arena),
+    explicit SkipList(Comparator cmp, Arena *arena) : _arena(arena),
+                                                      _compare(cmp),
+                                                      _head(NewNode(0, kMaxHeight)),
                                                       _max_height(1),
                                                       _rnd(0xdeadbeef) {
-        _head = NewNode(0, kMaxHeight);
         for (int i = 0; i < kMaxHeight; i++) {
             _head->SetNext(i, nullptr);
         }
@@ -36,7 +36,8 @@ public:
 
     SkipList& operator=(const SkipList&) = delete;
 
-    ~SkipList();
+    ~SkipList() {
+    }
 
     // Insert key into the list.
     void Insert(const Key& key);
@@ -61,6 +62,10 @@ private:
                 _next[n] = val;
             }
 
+            const Key& GetKey() const {
+                return _key;
+            }
+
         private:
             Key const _key;
 
@@ -69,6 +74,7 @@ private:
             atomic<Node *> _next[1];
     };
 
+public:
     // Iteration over the contents of a skip list.
     class Iterator {
         public:
@@ -85,7 +91,7 @@ private:
             // Returns the key at the current position.
             const Key& GetKey() const {
                 assert(Valid());
-                return _node->_key;
+                return _node->GetKey();
             }
 
             // Advances to the next position.
@@ -126,11 +132,12 @@ private:
             Node *_node;
     };
 
+private:
     int GetMaxHeight() const {
         return _max_height;
     }
 
-    bool Equal(const Key& a, const Key& b) {
+    bool Equal(const Key& a, const Key& b) const {
         return _compare(a, b) == 0;
     }
 
@@ -141,7 +148,7 @@ private:
     // Returns true if key is greater or equal to the data stored in 'node'.
     bool KeyIsAfterNode(const Key& key, Node *node) const {
         // If node is nullptr, node is considered infinite.
-        return (node != nullptr) && (_compare(node->_key, key) < 0);
+        return (node != nullptr) && (_compare(node->GetKey(), key) < 0);
     }
 
     /*
@@ -177,5 +184,132 @@ private:
 
 template <typename Key, class Comparator>
 const int SkipList<Key, Comparator>::kMaxHeight = 12;
+
+// Implementation of member functions.
+
+template <typename Key, class Comparator>
+typename SkipList<Key, Comparator>::Node *
+SkipList<Key, Comparator>::NewNode(const Key& key, int height) const
+{
+  char *node_memory = _arena->AllocateAligned(sizeof(Node) + sizeof(atomic<Node *>) * (height - 1));
+  return new (node_memory) Node(key);
+}
+
+template <typename Key, class Comparator>
+void
+SkipList<Key, Comparator>::Insert(const Key& key)
+{
+    Node *prev[kMaxHeight];
+    Node *node = FindGreaterOrEqual(key, prev);
+
+    // Does not allow duplicate insertion.
+    assert(node == nullptr || !Equal(node->_key, key));
+
+    int height = RandomHeight();
+    if (height > GetMaxHeight()) {
+        for (int i = GetMaxHeight(); i < height; i++) {
+            prev[i] = _head;
+        }
+        _max_height = height;
+    }
+
+    node = NewNode(key, height);
+    for (int i = 0; i < height; i++) {
+        node->SetNext(i, prev[i]->Next(i));
+        prev[i]->SetNext(i, node);
+    }
+}
+
+template <typename Key, class Comparator>
+bool
+SkipList<Key, Comparator>::Contains(const Key& key) const
+{
+    Node *node = FindGreaterOrEqual(key, nullptr);
+    return node != nullptr && Equal(node->GetKey(), key);
+}
+
+template <typename Key, class Comparator>
+typename SkipList<Key, Comparator>::Node *
+SkipList<Key, Comparator>::FindGreaterOrEqual(const Key& key, Node **prev) const
+{
+    Node *cur = _head;
+    int level = GetMaxHeight() - 1;
+
+    while (true) {
+        Node *next = cur->Next(level);
+        if (KeyIsAfterNode(key, next)) {
+            // key is larger than next node, keep searching in the node list at the current level.
+            cur = next;
+            if (prev != nullptr) {
+                prev[level] = cur;
+            }
+        } else {
+            if (level == 0) {
+                // next is the first node greater or equal to key.
+                return next;
+            }
+            level--;
+        }
+    }
+}
+
+template <typename Key, class Comparator>
+typename SkipList<Key, Comparator>::Node *
+SkipList<Key, Comparator>::FindLessThan(const Key& key) const
+{
+    Node *cur = _head;
+    int level = GetMaxHeight() - 1;
+    while (true) {
+        Node *next = cur->Next(level);
+        if (KeyIsAfterNode(key, next)) {
+            // key is larger than next node, keep searching in the node list at the current level.
+            cur = next;
+        } else {
+            if (level == 0) {
+                // cur is the last node less than key.
+                return cur;
+            }
+            level--;
+        }
+    }
+}
+
+template <typename Key, class Comparator>
+typename SkipList<Key, Comparator>::Node *
+SkipList<Key, Comparator>::FindLast() const
+{
+    Node *cur = _head;
+    int level = GetMaxHeight() - 1;
+
+    while (true) {
+        Node *next = cur->Next(level);
+        if (next != nullptr) {
+            cur = next;
+            continue;
+        }
+
+        if (level == 0) {
+            return cur;
+        }
+
+        level--;
+    }
+}
+
+template <typename Key, class Comparator>
+int
+SkipList<Key, Comparator>::RandomHeight() {
+  // Increase height with probability 1 in kBranching.
+  static const int kBranching = 4;
+  int height = 1;
+
+  while (height < kMaxHeight && _rnd.OneIn(kBranching)) {
+    height++;
+  }
+
+  assert(height > 0);
+  assert(height <= kMaxHeight);
+  return height;
+}
 
 } // namespace leveldb.
