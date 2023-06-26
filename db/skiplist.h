@@ -24,7 +24,7 @@ public:
      */
     explicit SkipList(Comparator cmp, Arena *arena) : _arena(arena),
                                                       _compare(cmp),
-                                                      _head(NewNode(0, kMaxHeight)),
+                                                      _head(NewNode(0 /* any key will do */, kMaxHeight)),
                                                       _max_height(1),
                                                       _rnd(0xdeadbeef) {
         for (int i = 0; i < kMaxHeight; i++) {
@@ -103,13 +103,13 @@ public:
             // Adcances to the previous position.
             void Prev() {
                 assert(Valid());
-                _node = _list->FindLessThan(_node->_key);
+                _node = _list->FindLessThan(_node->GetKey());
                 if (_node == _list->_head) {
                     _node = nullptr;
                 }
             }
 
-            // Adcances to the fist entry with a key >= target.
+            // Adcances to the first entry with a key >= target.
             void Seek(const Key& target) {
                 _node = _list->FindGreaterOrEqual(target, nullptr);
             }
@@ -199,11 +199,10 @@ template <typename Key, class Comparator>
 void
 SkipList<Key, Comparator>::Insert(const Key& key)
 {
-    Node *prev[kMaxHeight];
+    Node * prev[kMaxHeight] = { nullptr };
     Node *node = FindGreaterOrEqual(key, prev);
-
     // Does not allow duplicate insertion.
-    assert(node == nullptr || !Equal(node->_key, key));
+    assert(node == nullptr || !Equal(node->GetKey(), key));
 
     int height = RandomHeight();
     if (height > GetMaxHeight()) {
@@ -212,7 +211,6 @@ SkipList<Key, Comparator>::Insert(const Key& key)
         }
         _max_height = height;
     }
-
     node = NewNode(key, height);
     for (int i = 0; i < height; i++) {
         node->SetNext(i, prev[i]->Next(i));
@@ -240,10 +238,10 @@ SkipList<Key, Comparator>::FindGreaterOrEqual(const Key& key, Node **prev) const
         if (KeyIsAfterNode(key, next)) {
             // key is larger than next node, keep searching in the node list at the current level.
             cur = next;
+        } else {
             if (prev != nullptr) {
                 prev[level] = cur;
             }
-        } else {
             if (level == 0) {
                 // next is the first node greater or equal to key.
                 return next;
