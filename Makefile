@@ -7,13 +7,16 @@ GOOGLETEST_DIR=/opt/homebrew/Cellar/googletest/1.13.0
 
 CC = g++
 
-CFLAGS = -c -Wall -I. -I$(GOOGLETEST_DIR)/include -std=c++14 -stdlib=libc++
+# add folder ., include, and googletest to the header path
+CFLAGS = -c -Wall -I. -I$(GOOGLETEST_DIR)/include -Iinclude -std=c++14 -stdlib=libc++
 
 LDFLAGS=-L$(GOOGLETEST_DIR)/lib -lpthread -lgtest -lgtest_main
 
 LIBOBJECTS = \
-		./db/memtable.o\
-		./util/arena.o
+		./db/memtable.o	\
+		./util/arena.o 	\
+		./util/hash.o   \
+		./util/env_posix.o
 
 TESTS = \
 		arena_test		\
@@ -37,8 +40,8 @@ clean:
 test: $(TESTS)
 	@ for t in $(TESTS); do echo "=== Running $$t ==="; ./$$t || exit 1; done
 
-arena_test: ./util/arena.o ./util/arena_test.o
+arena_test: ./util/arena.o ./util/arena_test.o ./util/hash.o
 	$(CC) $(LDFLAGS) $^ -o $@
 
-skiplist_test: ./db/skiplist_test.o ./util/arena.o
+skiplist_test: ./db/skiplist_test.o ./util/arena.o ./util/hash.o ./util/env_posix.o
 	$(CC) $(LDFLAGS) $^ -o $@
